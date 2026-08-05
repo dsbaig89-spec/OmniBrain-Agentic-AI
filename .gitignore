@@ -1,0 +1,14 @@
+# Environment
+.env
+backend/.env
+
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# Node
+frontend/node_modules/
+
+# Uploads
+backend/uploads/
