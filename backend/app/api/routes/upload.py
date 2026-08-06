@@ -6,6 +6,7 @@ from backend.app.services.pdf_service import extract_text
 from backend.app.services.image_service import extract_text_from_image
 from backend.app.services.chunk_service import chunk_text
 from backend.app.services.embedding_service import generate_embeddings
+from backend.app.services.csv_service import extract_text_from_csv
 from backend.app.services.vector_service import (
     create_collection,
     store_embeddings,
@@ -15,7 +16,9 @@ router = APIRouter()
 
 UPLOAD_FOLDER = "backend/uploads"
 IMAGE_FOLDER = "backend/uploads/images"
+CSV_FOLDER = "backend/uploads/csv"
 
+os.makedirs(CSV_FOLDER, exist_ok=True)
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(IMAGE_FOLDER, exist_ok=True)
 
@@ -114,4 +117,37 @@ async def upload_image(file: UploadFile = File(...)):
         "vectors_stored": len(embeddings),
         "extracted_text": text,
         "message": "Image processed successfully."
+    }
+@router.post("/upload-csv", tags=["Upload"])
+async def upload_csv(file: UploadFile = File(...)):
+
+    if not file.filename.lower().endswith(".csv"):
+        raise HTTPException(
+            status_code=400,
+            detail="Only CSV files are allowed."
+        )
+
+    file_path = os.path.join(CSV_FOLDER, file.filename)
+
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    # Read CSV
+    text = extract_text_from_csv(file_path)
+
+    # Split into chunks
+    chunks = chunk_text(text)
+
+    # Generate embeddings
+    embeddings = generate_embeddings(chunks)
+
+    # Store in Qdrant
+    create_collection()
+    store_embeddings(chunks, embeddings)
+
+    return {
+        "status": "success",
+        "filename": file.filename,
+        "rows": len(chunks),
+        "message": "CSV uploaded successfully."
     }

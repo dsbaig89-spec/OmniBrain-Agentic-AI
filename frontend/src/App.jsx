@@ -8,6 +8,7 @@ function App() {
   const [answer, setAnswer] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Upload PDF / Image / CSV
   const uploadFile = async () => {
     if (!file) {
       alert("Select a file first");
@@ -17,34 +18,44 @@ function App() {
     const formData = new FormData();
     formData.append("file", file);
 
-    // Decide endpoint based on file type
     let endpoint = "";
 
     if (file.type === "application/pdf") {
       endpoint = "http://127.0.0.1:8000/upload";
     } else if (file.type.startsWith("image/")) {
       endpoint = "http://127.0.0.1:8000/upload-image";
+    } else if (file.name.toLowerCase().endsWith(".csv")) {
+      endpoint = "http://127.0.0.1:8000/upload-csv";
     } else {
-      alert("Only PDF or Image files are allowed.");
+      alert("Only PDF, Image or CSV files are supported.");
       return;
     }
 
     setLoading(true);
 
     try {
-      await axios.post(endpoint, formData);
+      const res = await axios.post(endpoint, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
-      alert("Uploaded Successfully");
+      console.log(res.data);
+      alert("File uploaded successfully.");
     } catch (err) {
       console.error(err);
-      alert("Upload Failed");
+      alert("Upload failed.");
     }
 
     setLoading(false);
   };
 
+  // Ask AI
   const askQuestion = async () => {
-    if (!query) return;
+    if (!query.trim()) {
+      alert("Enter a question.");
+      return;
+    }
 
     setLoading(true);
 
@@ -59,7 +70,7 @@ function App() {
       setAnswer(res.data.answer);
     } catch (err) {
       console.error(err);
-      alert("Search Failed");
+      alert("Search failed.");
     }
 
     setLoading(false);
@@ -67,12 +78,11 @@ function App() {
 
   return (
     <div className="container">
-
       <h1>🧠 OmniBrain Agentic AI</h1>
 
       <input
         type="file"
-        accept=".pdf,image/*"
+        accept=".pdf,.csv,.png,.jpg,.jpeg,image/*"
         onChange={(e) => setFile(e.target.files[0])}
       />
 
@@ -95,12 +105,11 @@ function App() {
         Ask AI
       </button>
 
-      {loading && <h3>Thinking...</h3>}
+      {loading && <h3>Processing...</h3>}
 
       <div className="answer">
         {answer}
       </div>
-
     </div>
   );
 }
