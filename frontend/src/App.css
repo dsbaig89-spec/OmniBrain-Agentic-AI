@@ -62,3 +62,9 @@ button:hover {
   color: #2563eb;
   font-weight: bold;
 }
+
+.subtitle {
+  color: #666;
+  font-size: 18px;
+  margin-bottom: 20px;
+}

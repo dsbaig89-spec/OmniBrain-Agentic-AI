@@ -79,7 +79,9 @@ function App() {
   return (
     <div className="container">
       <h1>🧠 OmniBrain Agentic AI</h1>
-
+       <p className="subtitle">
+        Enterprise Multimodal AI Assistant
+       </p>
       <input
         type="file"
         accept=".pdf,.csv,.png,.jpg,.jpeg,image/*"
