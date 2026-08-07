@@ -5,13 +5,14 @@ import "./App.css";
 function App() {
   const [file, setFile] = useState(null);
   const [query, setQuery] = useState("");
-  const [answer, setAnswer] = useState("");
+  const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [activePage, setActivePage] = useState("upload");
 
-  // Upload PDF / Image / CSV
+  // Upload File
   const uploadFile = async () => {
     if (!file) {
-      alert("Select a file first");
+      alert("Select a file first.");
       return;
     }
 
@@ -27,21 +28,20 @@ function App() {
     } else if (file.name.toLowerCase().endsWith(".csv")) {
       endpoint = "http://127.0.0.1:8000/upload-csv";
     } else {
-      alert("Only PDF, Image or CSV files are supported.");
+      alert("Only PDF, Image and CSV files are supported.");
       return;
     }
 
     setLoading(true);
 
     try {
-      const res = await axios.post(endpoint, formData, {
+      await axios.post(endpoint, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
       });
 
-      console.log(res.data);
-      alert("File uploaded successfully.");
+      alert("✅ File uploaded successfully.");
     } catch (err) {
       console.error(err);
       alert("Upload failed.");
@@ -60,14 +60,19 @@ function App() {
     setLoading(true);
 
     try {
-      const res = await axios.post(
-        "http://127.0.0.1:8000/search",
-        {
-          query: query,
-        }
-      );
+      const res = await axios.post("http://127.0.0.1:8000/search", {
+        query,
+      });
 
-      setAnswer(res.data.answer);
+      setMessages((prev) => [
+        ...prev,
+        {
+          question: query,
+          answer: res.data.answer,
+        },
+      ]);
+
+      setQuery("");
     } catch (err) {
       console.error(err);
       alert("Search failed.");
@@ -77,40 +82,127 @@ function App() {
   };
 
   return (
-    <div className="container">
-      <h1>🧠 OmniBrain Agentic AI</h1>
-       <p className="subtitle">
-        Enterprise Multimodal AI Assistant
-       </p>
-      <input
-        type="file"
-        accept=".pdf,.csv,.png,.jpg,.jpeg,image/*"
-        onChange={(e) => setFile(e.target.files[0])}
-      />
+    <div className="app-layout">
+      {/* Sidebar */}
+      <div className="sidebar">
+        <h2>🧠 OmniBrain</h2>
 
-      <button onClick={uploadFile}>
-        Upload File
-      </button>
+        <ul>
+          <li
+            className={activePage === "upload" ? "active" : ""}
+            onClick={() => setActivePage("upload")}
+          >
+            📤 Upload
+          </li>
 
-      <br /><br />
+          <li
+            className={activePage === "chat" ? "active" : ""}
+            onClick={() => setActivePage("chat")}
+          >
+            💬 AI Chat
+          </li>
+        </ul>
+      </div>
 
-      <textarea
-        rows="3"
-        placeholder="Ask a question..."
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-      />
+      {/* Main Content */}
+      <div className="container">
+        <h1>🧠 OmniBrain Agentic AI</h1>
 
-      <br />
+        <p className="subtitle">
+          Enterprise Multimodal AI Assistant
+        </p>
 
-      <button onClick={askQuestion}>
-        Ask AI
-      </button>
+        {/* Features */}
+        <div className="features">
+          <div className="feature-card">📄 PDF</div>
+          <div className="feature-card">🖼 Image</div>
+          <div className="feature-card">📊 CSV</div>
+          <div className="feature-card">🤖 AI Search</div>
+        </div>
 
-      {loading && <h3>Processing...</h3>}
+        {/* Upload Card */}
+        <div className="card">
+          <h2>📤 Upload Document</h2>
 
-      <div className="answer">
-        {answer}
+          <input
+            type="file"
+            accept=".pdf,.csv,.png,.jpg,.jpeg,image/*"
+            onChange={(e) => setFile(e.target.files[0])}
+          />
+
+          <br />
+          <br />
+
+          <button onClick={uploadFile}>
+            Upload File
+          </button>
+        </div>
+
+        {/* Ask AI */}
+        <div className="card">
+          <h2>💬 Ask OmniBrain</h2>
+
+          <textarea
+            rows="4"
+            placeholder="Ask a question about the uploaded document..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+
+          <br />
+
+          <button onClick={askQuestion}>
+            Ask AI
+          </button>
+
+          {loading && (
+            <div className="loading">
+              🤖 OmniBrain is thinking...
+            </div>
+          )}
+        </div>
+
+        {/* Conversation */}
+        <div className="card">
+          <h2>🤖 Conversation</h2>
+
+          <div className="chat-window">
+            {messages.length === 0 ? (
+              <div className="welcome">
+                <h3>Welcome to OmniBrain 🚀</h3>
+
+                <p>
+                  Upload a PDF, Image or CSV and start chatting.
+                </p>
+
+                <br />
+
+                <strong>Try asking:</strong>
+
+                <ul>
+                  <li>Summarize the uploaded file.</li>
+                  <li>What are the key points?</li>
+                  <li>Explain this image.</li>
+                  <li>Analyze the CSV.</li>
+                </ul>
+              </div>
+            ) : (
+              messages.map((msg, index) => (
+                <div key={index}>
+                  <div className="user-message">
+                    <strong>👤 You</strong>
+                    <p>{msg.question}</p>
+                  </div>
+
+                  <div className="bot-message">
+                    <strong>🤖 OmniBrain</strong>
+                    <p>{msg.answer}</p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

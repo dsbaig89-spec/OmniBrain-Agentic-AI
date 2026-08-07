@@ -1,8 +1,7 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from backend.app.services.vector_service import search_vectors
-from backend.app.services.llm_service import generate_answer
+from backend.app.services.supervisor import supervisor
 
 router = APIRouter()
 
@@ -14,17 +13,7 @@ class SearchRequest(BaseModel):
 @router.post("/search", tags=["Search"])
 def search(request: SearchRequest):
 
-    results = search_vectors(request.query)
-
-    context = ""
-
-    for point in results:
-        context += point.payload["text"] + "\n\n"
-
-    answer = generate_answer(
-        request.query,
-        context
-    )
+    answer = supervisor(request.query)
 
     return {
         "query": request.query,
