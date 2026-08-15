@@ -2,7 +2,8 @@ from groq import Groq
 from dotenv import load_dotenv
 import os
 
-load_dotenv()
+# Load environment variables from backend/.env
+load_dotenv("backend/.env")
 
 client = Groq(
     api_key=os.getenv("GROQ_API_KEY")
