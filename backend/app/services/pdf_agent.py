@@ -1,14 +1,46 @@
 from backend.app.services.vector_service import search_vectors
 from backend.app.services.llm_service import generate_answer
+from backend.app.services.langfuse_service import langfuse
 
 
 def pdf_agent(query: str):
 
-    results = search_vectors(query)
+    # Trace the retrieval step
+    with langfuse.start_as_current_observation(
+        as_type="span",
+        name="qdrant-retrieval"
+    ) as retrieval:
 
-    context = ""
+        retrieval.update(
+            input={
+                "query": query
+            }
+        )
 
-    for point in results:
-        context += point.payload["text"] + "\n\n"
+        # Search Qdrant
+        results = search_vectors(query)
 
-    return generate_answer(query, context)
+        # Collect retrieved chunks
+        context_parts = []
+
+        for point in results:
+            if point.payload and "text" in point.payload:
+                context_parts.append(point.payload["text"])
+
+        context = "\n\n".join(context_parts)
+
+        # Record retrieved information
+        retrieval.update(
+            output={
+                "chunks_retrieved": len(context_parts),
+                "context": context
+            }
+        )
+
+    # Generate final answer using retrieved context
+    answer = generate_answer(query, context)
+
+    # Send trace data to Langfuse
+    langfuse.flush()
+
+    return answer
