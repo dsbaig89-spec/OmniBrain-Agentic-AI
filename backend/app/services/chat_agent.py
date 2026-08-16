@@ -1,31 +1,36 @@
-from backend.app.services.vector_service import search_vectors
-from backend.app.services.llm_service import generate_answer
+from groq import Groq
+from dotenv import load_dotenv
+import os
+
+load_dotenv("backend/.env")
+
+client = Groq(
+    api_key=os.getenv("GROQ_API_KEY")
+)
 
 
 def chat_agent(query: str):
 
-    results = search_vectors(query)
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[
+            {
+                "role": "system",
+                "content": """
+You are OmniBrain, a helpful AI assistant.
 
-    context_parts = []
-    sources = []
+For general conversation, answer naturally and helpfully.
 
-    for point in results:
+Do not say that you need uploaded documents for normal greetings,
+casual conversation, or general questions.
+"""
+            },
+            {
+                "role": "user",
+                "content": query
+            }
+        ],
+        temperature=0.3
+    )
 
-        if point.payload and "text" in point.payload:
-
-            text = point.payload["text"]
-
-            context_parts.append(text)
-
-            sources.append({
-                "text": text[:300]
-            })
-
-    context = "\n\n".join(context_parts)
-
-    answer = generate_answer(query, context)
-
-    return {
-        "answer": answer,
-        "sources": sources
-    }
+    return response.choices[0].message.content
