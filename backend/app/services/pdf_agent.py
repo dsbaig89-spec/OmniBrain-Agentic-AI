@@ -5,7 +5,6 @@ from backend.app.services.langfuse_service import langfuse
 
 def pdf_agent(query: str):
 
-    # Trace the retrieval step
     with langfuse.start_as_current_observation(
         as_type="span",
         name="qdrant-retrieval"
@@ -17,19 +16,32 @@ def pdf_agent(query: str):
             }
         )
 
-        # Search Qdrant
         results = search_vectors(query)
 
-        # Collect retrieved chunks
         context_parts = []
+        sources = []
+        seen_text = set()
 
         for point in results:
+
             if point.payload and "text" in point.payload:
-                context_parts.append(point.payload["text"])
+
+                text = point.payload["text"].strip()
+
+                # Remove duplicate chunks
+                if text in seen_text:
+                    continue
+
+                seen_text.add(text)
+
+                context_parts.append(text)
+
+                sources.append({
+                    "text": text[:300]
+                })
 
         context = "\n\n".join(context_parts)
 
-        # Record retrieved information
         retrieval.update(
             output={
                 "chunks_retrieved": len(context_parts),
@@ -37,10 +49,11 @@ def pdf_agent(query: str):
             }
         )
 
-    # Generate final answer using retrieved context
     answer = generate_answer(query, context)
 
-    # Send trace data to Langfuse
     langfuse.flush()
 
-    return answer
+    return {
+        "answer": answer,
+        "sources": sources
+    }

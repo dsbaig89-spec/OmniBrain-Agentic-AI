@@ -13,9 +13,10 @@ class SearchRequest(BaseModel):
 @router.post("/search", tags=["Search"])
 def search(request: SearchRequest):
 
-    answer = supervisor(request.query)
+    result = supervisor(request.query)
 
     return {
         "query": request.query,
-        "answer": answer
+        "answer": result["answer"],
+        "sources": result.get("sources", [])
     }

@@ -4,16 +4,28 @@ from backend.app.services.llm_service import generate_answer
 
 def chat_agent(query: str):
 
-    # Search uploaded documents
     results = search_vectors(query)
 
     context_parts = []
+    sources = []
 
     for point in results:
+
         if point.payload and "text" in point.payload:
-            context_parts.append(point.payload["text"])
+
+            text = point.payload["text"]
+
+            context_parts.append(text)
+
+            sources.append({
+                "text": text[:300]
+            })
 
     context = "\n\n".join(context_parts)
 
-    # Generate answer using retrieved document context
-    return generate_answer(query, context)
+    answer = generate_answer(query, context)
+
+    return {
+        "answer": answer,
+        "sources": sources
+    }

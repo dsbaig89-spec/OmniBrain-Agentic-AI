@@ -65,12 +65,13 @@ function App() {
       });
 
       setMessages((prev) => [
-        ...prev,
-        {
-          question: query,
-          answer: res.data.answer,
-        },
-      ]);
+  ...prev,
+  {
+    question: query,
+    answer: res.data.answer,
+    sources: res.data.sources || [],
+  },
+]);
 
       setQuery("");
     } catch (err) {
@@ -197,6 +198,18 @@ function App() {
                   <div className="bot-message">
                     <strong>🤖 OmniBrain</strong>
                     <p>{msg.answer}</p>
+                    {msg.sources && msg.sources.length > 0 && (
+  <div className="sources">
+    <h4>📚 Sources</h4>
+
+    {msg.sources.map((source, index) => (
+      <div className="source-item" key={index}>
+        <strong>Source {index + 1}</strong>
+        <p>{source.text}</p>
+      </div>
+    ))}
+  </div>
+)}
                   </div>
                 </div>
               ))

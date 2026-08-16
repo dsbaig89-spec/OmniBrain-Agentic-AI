@@ -6,9 +6,26 @@ def image_agent(query: str):
 
     results = search_vectors(query)
 
-    context = ""
+    context_parts = []
+    sources = []
 
     for point in results:
-        context += point.payload["text"] + "\n\n"
 
-    return generate_answer(query, context)
+        if point.payload and "text" in point.payload:
+
+            text = point.payload["text"]
+
+            context_parts.append(text)
+
+            sources.append({
+                "text": text[:300]
+            })
+
+    context = "\n\n".join(context_parts)
+
+    answer = generate_answer(query, context)
+
+    return {
+        "answer": answer,
+        "sources": sources
+    }
