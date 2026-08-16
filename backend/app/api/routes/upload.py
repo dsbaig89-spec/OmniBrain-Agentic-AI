@@ -2,9 +2,9 @@ from fastapi import APIRouter, UploadFile, File, HTTPException
 import shutil
 import os
 
-from backend.app.services.pdf_service import extract_text
+from backend.app.services.pdf_service import extract_text, extract_pages
 from backend.app.services.image_service import extract_text_from_image
-from backend.app.services.chunk_service import chunk_text
+from backend.app.services.chunk_service import chunk_text, chunk_pages
 from backend.app.services.embedding_service import generate_embeddings
 from backend.app.services.csv_service import extract_text_from_csv
 from backend.app.services.vector_service import (
@@ -40,37 +40,67 @@ async def upload_pdf(file: UploadFile = File(...)):
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    # Extract text
-    text = extract_text(file_path)
+    # ==========================================
+    # Extract PDF page-by-page
+    # ==========================================
 
-    if not text.strip():
+    pages = extract_pages(file_path)
+
+    if not pages:
         raise HTTPException(
             status_code=400,
             detail="No text found inside PDF."
         )
 
-    # Chunk
-    chunks = chunk_text(text)
+    # ==========================================
+    # Chunk while preserving page number
+    # ==========================================
 
-    # Embeddings
+    page_chunks = chunk_pages(pages)
+
+    chunks = [item["text"] for item in page_chunks]
+
+    metadata = [
+        {
+            "page": item["page"],
+            "filename": file.filename,
+            "type": "pdf"
+        }
+        for item in page_chunks
+    ]
+
+    # ==========================================
+    # Generate embeddings
+    # ==========================================
+
     embeddings = generate_embeddings(chunks)
 
+    # ==========================================
     # Store in Qdrant
+    # ==========================================
+
     create_collection()
-    store_embeddings(chunks, embeddings)
+
+    store_embeddings(
+        chunks,
+        embeddings,
+        metadata
+    )
+
+    # ==========================================
+    # Response
+    # ==========================================
 
     return {
         "status": "success",
         "type": "pdf",
         "filename": file.filename,
-        "characters": len(text),
+        "pages": len(pages),
         "total_chunks": len(chunks),
         "embedding_dimension": len(embeddings[0]),
         "vectors_stored": len(embeddings),
-        "message": "PDF processed successfully."
+        "message": "PDF processed successfully with page metadata."
     }
-
-
 # ==========================================
 # Image Upload
 # ==========================================

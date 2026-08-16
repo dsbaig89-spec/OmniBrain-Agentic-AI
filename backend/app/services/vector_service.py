@@ -26,17 +26,23 @@ def create_collection():
         )
 
 
-def store_embeddings(chunks, embeddings):
+def store_embeddings(chunks, embeddings, metadata=None):
     points = []
 
-    for chunk, embedding in zip(chunks, embeddings):
+    for index, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
+
+        payload = {
+            "text": chunk
+        }
+
+        if metadata:
+            payload.update(metadata[index])
+
         points.append(
             PointStruct(
                 id=str(uuid.uuid4()),
                 vector=embedding,
-                payload={
-                    "text": chunk
-                }
+                payload=payload
             )
         )
 

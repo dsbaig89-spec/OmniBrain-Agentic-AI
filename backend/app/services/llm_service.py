@@ -31,23 +31,31 @@ If the answer is not in the context, say:
 'I couldn't find the answer in the uploaded documents.'
 """
 
-    # Create Langfuse trace/span
+    # ==========================================
+    # Langfuse RAG Trace
+    # ==========================================
+
     with langfuse.start_as_current_observation(
         as_type="span",
-        name="omnibrain-rag"
+        name="omnibrain-rag",
+        input={
+            "question": question,
+            "context": context
+        }
     ) as span:
 
-        span.update(
-            input={
-                "question": question
-            }
-        )
+        # ==========================================
+        # Groq LLM Generation
+        # ==========================================
 
-        # Track the LLM generation
         with langfuse.start_as_current_observation(
             as_type="generation",
             name="groq-generation",
-            model="llama-3.3-70b-versatile"
+            model="llama-3.3-70b-versatile",
+            input={
+                "question": question,
+                "prompt": prompt
+            }
         ) as generation:
 
             response = client.chat.completions.create(
@@ -63,18 +71,19 @@ If the answer is not in the context, say:
 
             answer = response.choices[0].message.content
 
+            # Record LLM output
             generation.update(
-                input=prompt,
                 output=answer
             )
 
+        # Record final RAG output
         span.update(
             output={
                 "answer": answer
             }
         )
 
-    # Send trace data to Langfuse
+    # Send data to Langfuse
     langfuse.flush()
 
     return answer
