@@ -15,47 +15,45 @@ langfuse = get_client()
 
 
 def generate_answer(question, context):
-
+    
     prompt = f"""
-You are an AI assistant.
+You are OmniBrain, an AI assistant that answers questions using uploaded documents.
 
-Answer the user's question using ONLY the context below.
+Use the retrieved context below to answer the user's question.
 
-Context:
+IMPORTANT RULES:
+1. Use the information present in the context.
+2. If the answer is clearly present, answer directly.
+3. Do not say "I couldn't find the answer" when the context contains the answer.
+4. Do not invent information that is not present.
+5. Keep the answer concise.
+6. For personal/profile questions, extract the exact information from the context.
+
+Retrieved Context:
 {context}
 
-Question:
+User Question:
 {question}
 
-If the answer is not in the context, say:
-'I couldn't find the answer in the uploaded documents.'
+Answer:
 """
-
-    # ==========================================
-    # Langfuse RAG Trace
-    # ==========================================
 
     with langfuse.start_as_current_observation(
         as_type="span",
-        name="omnibrain-rag",
-        input={
-            "question": question,
-            "context": context
-        }
+        name="omnibrain-rag"
     ) as span:
 
-        # ==========================================
-        # Groq LLM Generation
-        # ==========================================
+        span.update(
+            input={
+                "question": question,
+                "context": context
+            }
+        )
 
         with langfuse.start_as_current_observation(
             as_type="generation",
             name="groq-generation",
-            model="llama-3.3-70b-versatile",
-            input={
-                "question": question,
-                "prompt": prompt
-            }
+            model="llama-3.3-70b-versatile"
         ) as generation:
 
             response = client.chat.completions.create(
@@ -71,19 +69,17 @@ If the answer is not in the context, say:
 
             answer = response.choices[0].message.content
 
-            # Record LLM output
             generation.update(
+                input=prompt,
                 output=answer
             )
 
-        # Record final RAG output
         span.update(
             output={
                 "answer": answer
             }
         )
 
-    # Send data to Langfuse
     langfuse.flush()
 
     return answer

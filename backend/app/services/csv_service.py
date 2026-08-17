@@ -1,13 +1,27 @@
 import pandas as pd
-import chardet
 
-def extract_text_from_csv(file_path):
 
-    with open(file_path, "rb") as f:
-        result = chardet.detect(f.read())
+def extract_text_from_csv(csv_path: str) -> str:
+    """
+    Extract CSV contents as text for embedding/RAG.
+    Supports UTF-8 and Windows-1252 encoded CSV files.
+    """
 
-    encoding = result["encoding"]
+    try:
+        df = pd.read_csv(
+            csv_path,
+            encoding="utf-8"
+        )
 
-    df = pd.read_csv(file_path, encoding=encoding)
+    except UnicodeDecodeError:
+        df = pd.read_csv(
+            csv_path,
+            encoding="cp1252"
+        )
 
-    return df.to_string(index=False)
+    # Convert the dataframe into readable text
+    text = df.to_string(
+        index=False
+    )
+
+    return text

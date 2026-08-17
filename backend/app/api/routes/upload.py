@@ -1,7 +1,7 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
 import shutil
 import os
-
+from backend.app.services.vlm_service import analyze_image
 from backend.app.services.pdf_service import extract_text, extract_pages
 from backend.app.services.image_service import extract_text_from_image
 from backend.app.services.chunk_service import chunk_text, chunk_pages
@@ -118,36 +118,93 @@ async def upload_image(file: UploadFile = File(...)):
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
+    # ==========================================
     # OCR
-    text = extract_text_from_image(file_path)
+    # ==========================================
 
-    if not text.strip():
+    try:
+        ocr_text = extract_text_from_image(file_path)
+    except Exception as e:
+        ocr_text = f"OCR failed: {str(e)}"
+
+    # ==========================================
+    # VLM ANALYSIS
+    # ==========================================
+
+    try:
+        vlm_text = analyze_image(file_path)
+    except Exception as e:
+        vlm_text = f"VLM analysis failed: {str(e)}"
+
+    # ==========================================
+    # Combine OCR + VLM
+    # ==========================================
+
+    combined_text = f"""
+IMAGE FILE: {file.filename}
+
+OCR TEXT:
+{ocr_text}
+
+VISUAL ANALYSIS:
+{vlm_text}
+"""
+
+    if not ocr_text.strip() and not vlm_text.strip():
         raise HTTPException(
             status_code=400,
-            detail="No readable text found in image."
+            detail="No information could be extracted from image."
         )
 
+    # ==========================================
     # Chunk
-    chunks = chunk_text(text)
+    # ==========================================
 
+    chunks = chunk_text(combined_text)
+
+    # ==========================================
     # Embeddings
+    # ==========================================
+
     embeddings = generate_embeddings(chunks)
 
+    # ==========================================
     # Store in Qdrant
+    # ==========================================
+
     create_collection()
-    store_embeddings(chunks, embeddings)
+
+    metadata = [
+        {
+            "filename": file.filename,
+            "type": "image",
+            "source": "OCR + VLM"
+        }
+        for _ in chunks
+    ]
+
+    store_embeddings(
+        chunks,
+        embeddings,
+        metadata
+    )
+
+    # ==========================================
+    # Response
+    # ==========================================
 
     return {
         "status": "success",
         "type": "image",
         "filename": file.filename,
-        "characters": len(text),
+        "ocr_text": ocr_text,
+        "vlm_analysis": vlm_text,
         "total_chunks": len(chunks),
-        "embedding_dimension": len(embeddings[0]),
         "vectors_stored": len(embeddings),
-        "extracted_text": text,
-        "message": "Image processed successfully."
+        "message": "Image processed using OCR + VLM successfully."
     }
+    
+    
 @router.post("/upload-csv", tags=["Upload"])
 async def upload_csv(file: UploadFile = File(...)):
 

@@ -1,6 +1,13 @@
 from backend.app.services.vector_service import search_vectors
 from backend.app.services.llm_service import generate_answer
+from backend.app.services.sql_agent import sql_agent
 
+
+def csv_agent(query: str):
+
+    result = sql_agent(query)
+
+    return result["answer"]
 
 def csv_agent(query: str):
 
