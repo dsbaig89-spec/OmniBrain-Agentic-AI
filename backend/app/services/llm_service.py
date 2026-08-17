@@ -53,11 +53,11 @@ Answer:
         with langfuse.start_as_current_observation(
             as_type="generation",
             name="groq-generation",
-            model="llama-3.3-70b-versatile"
+            model="openai/gpt-oss-20b",
         ) as generation:
 
             response = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
+                model="openai/gpt-oss-20b",
                 messages=[
                     {
                         "role": "user",
